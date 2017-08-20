@@ -1,0 +1,107 @@
+---
+title: "PRACTICAL MACHINE LEARNING"
+output: 
+  html_document:
+    keep_md: true
+---
+
+**Cvp August 2017**
+ 
+**Prediction Assignment Writeup**
+ 
+**Final programming asignment for the Machine Learning course**
+
+
+# 1. Loading and preprocessing the data
+
+Requiered libraries are loaded. Initial dimensions explored. 
+
+```{r q1, message=FALSE, warning=FALSE}
+library(caret)
+library(rpart)
+library(rpart.plot)
+
+# Setting the right local working directory and loading the datasets
+setwd("C:\\Users\\a212857\\Documents\\GitHub\\MachineLearning_PA")
+training <- read.csv("pml-training.csv")
+testing  <- read.csv("pml-testing.csv")
+
+dim(training)
+dim(testing)
+
+```
+
+# 2. Cleaning up
+ 
+Initial dimension of the datasets includes many columns without information, training data needs to be cleaned up. First column (index) deleted because it is nor relevant for prediction pruposes.
+
+```{r q2, message=FALSE, warning=FALSE}
+## Takes off the X (index) column not being relevant for prediction pruposes
+training <- training[,-1]
+testing  <- testing[,-1]
+
+# Dataset cleanup: identify and eliminate columns with NA's in the testing dataset
+emptycol <- vector(mode="numeric")
+for (i in c(1:ncol(testing)))
+        if (sum(is.na(testing[,i]))>1)
+                emptycol <- append(emptycol, i)
+
+# Delete columns identified in the previous step from the training and testing datasets
+training1 <- training[, -emptycol]
+testing1  <- testing [, -emptycol]
+
+# Delete not complete (NA's present) rows in the testing dataset
+training1 <- training1[complete.cases(training1),]
+```
+
+
+# 3. Cross validation
+ 
+Training set is divided into train and test datasets in order to adress cross validation before prediction. 75% cases for the training set is decided.
+
+```{r q3, message=FALSE, warning=FALSE}
+
+# Now we divide the training set into training and testing
+inTrain <- createDataPartition(y=training1$classe, p=0.75, list=FALSE)  
+trainset <- training1[inTrain,]
+testset  <- training1[-inTrain,]
+
+dim(trainset)
+dim(testset)
+```
+ 
+
+# 4. Model selection, training, validation and out of sample error 
+ 
+Problem doens't seem to be linear in nature, so trees are proposed. Accuracy seems to be backing up the model selection. Decision tree is plotted as well. Caret train method="rf" was discarded as it was very slow. Accuracy reflects an acceptable out of sample error (out of sample is understood here as the validation subset split through cross validation as explained above).
+
+```{r q4, message=FALSE, warning=FALSE}
+
+mod   <- rpart(classe ~ ., data=trainset, method="class")
+pred  <- predict(mod, testset, type="class")
+
+# Then calculate the confusion matrix including accuracy
+confusionMatrix(pred, testset$classe)
+
+# Plots the decision tree
+print(mod)
+#fancyRpartPlot(mod, sub="Model Decision Tree")
+rpart.plot(mod, sub="Model Decision Tree", tweak=1.5)
+```
+
+
+## 5. Final prediction of the Testing Dataset
+ 
+Final prediction is made based on the validated model
+
+```{r q5, message=FALSE, warning=FALSE}
+
+
+# Finally we predict the testing dataset
+pred  <- predict(mod, testing, type="class")
+pred
+
+```
+
+
+  
